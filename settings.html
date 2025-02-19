@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extension Settings</title>
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Extension Settings</h2>
+        <div class="form-group">
+            <label for="api-key">OpenAI API Key:</label>
+            <input type="text" id="api-key" placeholder="Enter your OpenAI API key">
+            <button id="save">Save</button>
+        </div>
+        <p>You can get your API key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI's website</a></p>
+    </div>
+    <script src="js/settings.js"></script>
+</body>
+</html> 

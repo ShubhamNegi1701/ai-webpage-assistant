@@ -1,0 +1,4 @@
+# Chrome Extension .gitignore
+.DS_Store
+node_modules/
+*.log

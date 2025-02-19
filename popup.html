@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AI Webpage Assistant</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <span>AI Webpage Assistant</span>
+            <i class="fas fa-cog settings-icon" id="settings-button"></i>
+        </div>
+        <div id="chat-messages" class="chat-messages"></div>
+        <div class="input-container">
+            <textarea 
+                id="user-input" 
+                placeholder="Ask about this webpage..."
+                rows="1"
+            ></textarea>
+            <button id="send-button">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+    <script src="js/popup.js"></script>
+</body>
+</html>
