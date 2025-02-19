@@ -9,13 +9,19 @@
   "background": {
     "service_worker": "background.js"
   },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["js/content.js"]
+  }],
   "permissions": [
     "storage",
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "<all_urls>"
   ],
   "options_page": "settings.html"
 }

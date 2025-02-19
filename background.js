@@ -11,6 +11,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         lastPageContent = request.content;
         return true;
     }
+    if (request.type === 'getSuggestedQuestions') {
+        generateSuggestedQuestions(request.pageInfo)
+            .then(questions => sendResponse({ questions }));
+        return true;
+    }
 });
 
 async function getApiKey() {
@@ -160,5 +165,64 @@ Your task is to answer questions about this webpage's content accurately and con
         sendResponse({ 
             text: `Error: ${error.message || 'There was an error processing your request.'}` 
         });
+    }
+}
+
+async function generateSuggestedQuestions(pageInfo) {
+    try {
+        const apiKey = await getApiKey();
+        if (!apiKey) return null;
+
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'gpt-3.5-turbo',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `Given this webpage content, generate 3 relevant and specific questions that would be interesting to ask about it. Return ONLY the questions in a JSON array format. Make the questions specific to the page content.
+
+Webpage: ${pageInfo.title}
+Content: ${pageInfo.content.substring(0, 1500)}...`
+                    },
+                    {
+                        role: 'user',
+                        content: 'Generate 3 specific questions about this content in JSON array format.'
+                    }
+                ],
+                max_tokens: 150,
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to generate questions');
+        }
+
+        const data = await response.json();
+        let questions;
+        try {
+            // Try to parse the response as JSON
+            questions = JSON.parse(data.choices[0].message.content);
+        } catch (e) {
+            // If parsing fails, try to extract questions from the text
+            const text = data.choices[0].message.content;
+            questions = text.split('\n')
+                .filter(line => line.trim().length > 0)
+                .map(line => line.replace(/^\d+\.\s*/, '').replace(/["']/g, ''))
+                .slice(0, 3);
+        }
+        return questions;
+    } catch (error) {
+        console.error('Error generating questions:', error);
+        return [
+            "What is this page about?",
+            "What are the main topics covered?",
+            "Can you summarize the key points?"
+        ];
     }
 }
