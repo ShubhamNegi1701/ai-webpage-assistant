@@ -190,7 +190,17 @@ body {
     gap: 8px;
     background-color: #f8f9fa;
     border-top: 1px solid #dee2e6;
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    transition: all 0.3s ease;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.suggested-questions.hidden {
+    max-height: 0;
+    padding: 0;
+    opacity: 0;
+    pointer-events: none;
+    border-top: none;
 }
 
 .question-btn {
@@ -202,12 +212,19 @@ body {
     cursor: pointer;
     font-size: 13px;
     font-weight: 500;
-    transition: all 0.2s ease, opacity 0.15s ease, transform 0.15s ease;
+    transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
     text-align: left;
     line-height: 1.4;
     white-space: normal;
     word-wrap: break-word;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    opacity: 1;
+}
+
+.question-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
 }
 
 .question-btn:hover {
@@ -236,4 +253,29 @@ body {
     color: #6c757d;
     transform: none;
     box-shadow: none;
+}
+
+/* Add smooth transition for hiding */
+.suggested-questions[style*="display: none"] {
+    opacity: 0;
+    max-height: 0;
+    padding: 0;
+    border-top: none;
+    transition: opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease;
+}
+
+/* Add a collapsible sidebar for advanced features */
+.sidebar {
+    position: fixed;
+    right: -300px;
+    width: 300px;
+    height: 100%;
+    transition: right 0.3s ease;
+}
+
+/* Add loading states with skeleton screens */
+.message-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
 }

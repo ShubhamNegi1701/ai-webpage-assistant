@@ -41,31 +41,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         const message = elements.userInput.value.trim();
         if (!message) return;
 
-        // Disable input while processing
-        elements.userInput.disabled = true;
-        elements.sendButton.disabled = true;
-        
-        // Add loading animation to button
-        elements.sendButton.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
-
-        // Add user message to chat
-        addMessage(message, true);
-        elements.userInput.value = '';
-        elements.userInput.style.height = 'auto';
-
         try {
+            // Disable input while processing
+            elements.userInput.disabled = true;
+            elements.sendButton.disabled = true;
+            elements.sendButton.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
+
+            // Add user message to chat
+            addMessage(message, true);
+            elements.userInput.value = '';
+            elements.userInput.style.height = 'auto';
+
             const response = await chrome.runtime.sendMessage({
                 type: 'processChat',
                 message: message
             });
             
-            if (response && response.text) {
-                addMessage(response.text, false);
+            // More robust response handling
+            if (response) {
+                const messageText = response.error ? 
+                    `Error: ${response.text}` : 
+                    response.text || 'No response received';
+                addMessage(messageText, false);
+            } else {
+                addMessage('Error: No response received', false);
             }
+
         } catch (error) {
-            addMessage('Error: Could not process message', false);
+            console.error('Message send error:', error);
+            addMessage('Error: Failed to send message', false);
         } finally {
-            // Reset button and input
+            // Reset UI state
             elements.sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
             elements.userInput.disabled = false;
             elements.sendButton.disabled = false;
@@ -73,7 +79,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    elements.sendButton.addEventListener('click', sendMessage);
+    elements.sendButton.addEventListener('click', () => sendMessage());
     elements.userInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -148,13 +154,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // Add this function before loadSuggestedQuestions
+    function updateSuggestedQuestionsUI(questions) {
+        const suggestedQuestionsDiv = document.getElementById('suggested-questions');
+        if (!suggestedQuestionsDiv) {
+            console.error('Could not find suggested-questions element');
+            return;
+        }
+
+        // Clear existing questions
+        suggestedQuestionsDiv.innerHTML = '';
+
+        // Add each question as a button
+        questions.forEach(question => {
+            const button = document.createElement('button');
+            button.className = 'question-btn';
+            button.textContent = question;
+            
+            // Add click handler to automatically send the question
+            button.addEventListener('click', async () => {
+                // Disable all question buttons to prevent double-clicking
+                const allButtons = suggestedQuestionsDiv.querySelectorAll('.question-btn');
+                allButtons.forEach(btn => btn.disabled = true);
+                
+                // Set the question in input and trigger send
+                const userInput = document.getElementById('user-input');
+                if (userInput) {
+                    userInput.value = question;
+                    userInput.dispatchEvent(new Event('input')); // Trigger auto-resize
+                    await sendMessage(); // Send the message
+                    
+                    // Clear suggested questions after sending
+                    suggestedQuestionsDiv.style.display = 'none';
+                    
+                    // Focus back on input for follow-up questions
+                    userInput.value = '';
+                    userInput.focus();
+                }
+            });
+
+            suggestedQuestionsDiv.appendChild(button);
+        });
+    }
+
+    function getDefaultQuestions() {
+        return [
+            "What is this page about?",
+            "What are the main topics covered?",
+            "Can you summarize the key points?"
+        ];
+    }
+
     // Function to load suggested questions
     async function loadSuggestedQuestions() {
         console.log('Loading suggested questions...');
         try {
             const pageInfo = await getPageContent();
-            if (!pageInfo) {
-                throw new Error('No page info available');
+            if (!pageInfo?.content) {
+                throw new Error('Invalid page content');
             }
 
             elements.suggestedQuestions.innerHTML = `
@@ -163,99 +220,35 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </button>
             `;
 
-            console.log('Requesting questions from background...');
             const response = await chrome.runtime.sendMessage({
                 type: 'getSuggestedQuestions',
                 pageInfo
             });
 
-            console.log('Received response:', response);
-
-            // Add more robust response validation
-            if (!response) {
-                throw new Error('Empty response received');
-            }
-
+            // More flexible response handling
             let questions = [];
-            if (Array.isArray(response.questions)) {
-                questions = response.questions;
-            } else if (typeof response.questions === 'string') {
-                // Try to parse as JSON if it's a string
-                try {
-                    const parsed = JSON.parse(response.questions);
-                    questions = Array.isArray(parsed) ? parsed : [parsed];
-                } catch (parseError) {
-                    // If JSON parsing fails, try splitting by newlines and cleaning up
-                    questions = response.questions
-                        .split(/[\n\r]+/)
-                        .map(q => q.trim())
-                        .filter(q => q && q.length > 0)
-                        .map(q => q.replace(/^[-*\d.)\s]+/, '')); // Remove leading bullets/numbers
-                }
-            }
-
-            // Validate questions and use defaults if necessary
-            if (!questions.length) {
-                throw new Error('No valid questions found in response');
-            }
-
-            // Sanitize questions to prevent XSS
-            const sanitizeText = (text) => {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
-            };
-
-            elements.suggestedQuestions.innerHTML = questions
-                .map(question => `
-                    <button class="question-btn">${sanitizeText(question)}</button>
-                `).join('');
             
-            // Add click handlers for the question buttons
-            const questionButtons = elements.suggestedQuestions.querySelectorAll('.question-btn');
-            questionButtons.forEach(button => {
-                button.addEventListener('click', async () => {
-                    // Set the question text in the input
-                    elements.userInput.value = button.textContent.trim();
-                    
-                    // Fade out all question buttons except the clicked one
-                    questionButtons.forEach(btn => {
-                        if (btn !== button) {
-                            btn.style.opacity = '0';
-                            btn.style.transform = 'translateY(5px)';
-                        }
-                    });
-                    
-                    // Highlight the selected question briefly
-                    button.style.backgroundColor = '#007bff';
-                    button.style.color = 'white';
-                    
-                    // Small delay before sending to show the selection
-                    await new Promise(resolve => setTimeout(resolve, 150));
-                    
-                    // Hide the suggested questions container
-                    elements.suggestedQuestions.style.opacity = '0';
-                    elements.suggestedQuestions.style.transform = 'translateY(10px)';
-                    
-                    // After animation, remove from layout
-                    setTimeout(() => {
-                        elements.suggestedQuestions.style.display = 'none';
-                        elements.chatMessages.style.flex = '1';
-                    }, 300);
-                    
-                    // Trigger the send message
-                    sendMessage();
-                });
-            });
+            if (response?.questions && Array.isArray(response.questions)) {
+                questions = response.questions
+                    .filter(q => typeof q === 'string' && q.trim().length > 0)
+                    .map(q => q.trim());
+            }
 
-            console.log('Questions loaded successfully');
+            // Use defaults if no valid questions
+            if (questions.length < 1) {
+                questions = [
+                    "What is this page about?",
+                    "What are the main topics covered?",
+                    "Can you summarize the key points?"
+                ];
+            }
+
+            // Update UI with questions
+            updateSuggestedQuestionsUI(questions);
+
         } catch (error) {
             console.error('Error loading questions:', error);
-            elements.suggestedQuestions.innerHTML = `
-                <button class="question-btn">What is this page about?</button>
-                <button class="question-btn">What are the main topics covered?</button>
-                <button class="question-btn">Can you summarize the key points?</button>
-            `;
+            updateSuggestedQuestionsUI(getDefaultQuestions());
         }
     }
 
