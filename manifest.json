@@ -3,6 +3,14 @@
   "version": "1.0",
   "description": "Chat with AI about any webpage content",
   "manifest_version": 3,
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "author": "nshubham2000@gmail.com",
+  "homepage_url": "https://github.com/yourusername/ai-webpage-assistant",
   "action": {
     "default_popup": "popup.html"
   },
@@ -16,12 +24,18 @@
   "permissions": [
     "storage",
     "activeTab",
-    "scripting",
-    "tabs"
+    "scripting"
   ],
   "host_permissions": [
-    "https://api.openai.com/*",
-    "<all_urls>"
+    "https://api.openai.com/*"
   ],
-  "options_page": "settings.html"
+  "options_page": "settings.html",
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "optional_permissions": [],
+  "web_accessible_resources": [{
+    "resources": [],
+    "matches": []
+  }]
 }

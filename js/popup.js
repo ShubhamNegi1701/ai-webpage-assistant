@@ -29,9 +29,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         elements.userInput.style.height = Math.min(elements.userInput.scrollHeight, 100) + 'px';
     });
 
-    function addMessage(text, isUser = false) {
+    function addMessage(text, isUser = false, isError = false) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+        if (isError) {
+            messageDiv.className += ' error-message';
+        }
         messageDiv.textContent = text;
         elements.chatMessages.appendChild(messageDiv);
         elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
@@ -62,14 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const messageText = response.error ? 
                     `Error: ${response.text}` : 
                     response.text || 'No response received';
-                addMessage(messageText, false);
+                addMessage(messageText, false, response.error);
             } else {
-                addMessage('Error: No response received', false);
+                addMessage('Error: No response received', false, true);
             }
 
         } catch (error) {
             console.error('Message send error:', error);
-            addMessage('Error: Failed to send message', false);
+            addMessage('Error: Failed to send message', false, true);
         } finally {
             // Reset UI state
             elements.sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
@@ -100,6 +103,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error('No active tab found');
             }
 
+            // Check if we can access the tab
+            if (!tab.url || tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://')) {
+                throw new Error('Cannot access this type of page. Please try on a regular webpage.');
+            }
+
             // First try using Manifest V3 approach
             if (chrome.scripting) {
                 console.log('Using chrome.scripting API...');
@@ -114,14 +122,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                     
                     if (!pageInfo?.result) {
-                        throw new Error('Failed to get page content');
+                        throw new Error('Could not extract page content');
                     }
                     
                     console.log('Page content retrieved successfully');
                     return pageInfo.result;
                 } catch (scriptError) {
                     console.error('Script execution failed:', scriptError);
-                    throw new Error('Failed to execute content script');
+                    throw new Error('Cannot access page content. Please check if the page has finished loading.');
                 }
             }
 
@@ -150,7 +158,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         } catch (error) {
             console.error('Failed to get page content:', error);
-            throw error; // Re-throw to be handled by caller
+            addMessage(`Error: ${error.message}`, false, true);
+            return null;
         }
     }
 
@@ -236,11 +245,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Use defaults if no valid questions
             if (questions.length < 1) {
-                questions = [
-                    "What is this page about?",
-                    "What are the main topics covered?",
-                    "Can you summarize the key points?"
-                ];
+                questions = getDefaultQuestions();
             }
 
             // Update UI with questions
@@ -248,6 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         } catch (error) {
             console.error('Error loading questions:', error);
+            // Don't show error message here since getPageContent already shows it
             updateSuggestedQuestionsUI(getDefaultQuestions());
         }
     }
@@ -260,3 +266,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Add welcome message
     addMessage('Hello! Ask me anything about this webpage, or try one of the suggested questions below.', false);
 });
+
+// Update global error handling to not suppress errors
+window.onerror = function(message, source, lineno, colno, error) {
+    console.error('Global error:', {message, source, lineno, colno, error});
+    // Don't return false to allow default error handling
+};
+
+// Improve error boundary with null check and error logging
+function handleError(error) {
+    console.error('Application error:', error);
+    
+    const chatContainer = document.querySelector('.chat-container');
+    if (!chatContainer) {
+        console.error('Chat container not found while handling error');
+        return;
+    }
+    
+    chatContainer.innerHTML = `
+        <div class="error-message">
+            <p>Something went wrong. Please try refreshing.</p>
+            <button onclick="location.reload()">Refresh</button>
+        </div>
+    `;
+}

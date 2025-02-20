@@ -358,3 +358,45 @@ function sanitizeContent(content) {
     return content.replace(/\b\d{16}\b/g, '[REDACTED]')
                  .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g, '[EMAIL]');
 }
+
+// Add rate limiting
+class RateLimiter {
+    constructor(maxRequests = 50, timeWindow = 60000) {
+        this.requests = [];
+        this.maxRequests = maxRequests;
+        this.timeWindow = timeWindow;
+        // Add lock for thread safety
+        this.isChecking = false;
+        // Add interval for cleanup
+        setInterval(() => this.cleanup(), this.timeWindow);
+    }
+
+    cleanup() {
+        const now = Date.now();
+        this.requests = this.requests.filter(time => now - time < this.timeWindow);
+    }
+
+    async checkLimit() {
+        // Wait if another check is in progress
+        while (this.isChecking) {
+            await new Promise(resolve => setTimeout(resolve, 10));
+        }
+
+        try {
+            this.isChecking = true;
+            const now = Date.now();
+            this.requests = this.requests.filter(time => now - time < this.timeWindow);
+
+            if (this.requests.length >= this.maxRequests) {
+                throw new Error('Rate limit exceeded. Please try again later.');
+            }
+
+            this.requests.push(now);
+            return true;
+        } finally {
+            this.isChecking = false;
+        }
+    }
+}
+
+const rateLimiter = new RateLimiter();

@@ -279,3 +279,12 @@ body {
     background-size: 200% 100%;
     animation: loading 1.5s infinite;
 }
+
+.message.error-message {
+    background-color: #fff2f2;
+    border-left: 4px solid #dc3545;
+    color: #dc3545;
+    padding: 10px 15px;
+    margin: 5px 0;
+    border-radius: 4px;
+}
