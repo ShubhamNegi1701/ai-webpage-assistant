@@ -45,7 +45,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!message) return;
 
         try {
-            // Disable input while processing
             elements.userInput.disabled = true;
             elements.sendButton.disabled = true;
             elements.sendButton.innerHTML = '<div class="loading"><span></span><span></span><span></span></div>';
@@ -55,16 +54,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             elements.userInput.value = '';
             elements.userInput.style.height = 'auto';
 
+            // Get current tab to use as chat history key
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            
+            // Get existing chat history for this tab
+            const result = await chrome.storage.local.get(['chatHistory']);
+            const chatHistory = result.chatHistory || {};
+            const tabHistory = chatHistory[tab.id] || [];
+
+            // Add user message to history
+            tabHistory.push({ text: message, isUser: true });
+            chatHistory[tab.id] = tabHistory;
+            await chrome.storage.local.set({ chatHistory });
+
             const response = await chrome.runtime.sendMessage({
                 type: 'processChat',
-                message: message
+                message: message,
+                tabId: tab.id
             });
             
-            // More robust response handling
             if (response) {
                 const messageText = response.error ? 
                     `Error: ${response.text}` : 
                     response.text || 'No response received';
+                
+                // Add AI response to history
+                if (!response.error) {
+                    tabHistory.push({ text: messageText, isUser: false });
+                    chatHistory[tab.id] = tabHistory;
+                    await chrome.storage.local.set({ chatHistory });
+                }
+                
                 addMessage(messageText, false, response.error);
             } else {
                 addMessage('Error: No response received', false, true);
@@ -74,7 +94,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('Message send error:', error);
             addMessage('Error: Failed to send message', false, true);
         } finally {
-            // Reset UI state
             elements.sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
             elements.userInput.disabled = false;
             elements.sendButton.disabled = false;
@@ -257,6 +276,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateSuggestedQuestionsUI(getDefaultQuestions());
         }
     }
+
+    // Load existing chat history when popup opens
+    async function loadChatHistory() {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            const result = await chrome.storage.local.get(['chatHistory']);
+            const chatHistory = result.chatHistory || {};
+            const tabHistory = chatHistory[tab.id] || [];
+            
+            // Add existing messages to chat
+            tabHistory.forEach(msg => {
+                addMessage(msg.text, msg.isUser);
+            });
+        } catch (error) {
+            console.error('Error loading chat history:', error);
+        }
+    }
+
+    // Load chat history when popup opens
+    await loadChatHistory();
 
     // Load suggested questions when popup opens
     console.log('Starting to load questions...');

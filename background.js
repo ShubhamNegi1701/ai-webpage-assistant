@@ -182,7 +182,6 @@ function getPageContent() {
 
 async function handleAIChat(message, sendResponse) {
     try {
-        // Add check for active tab
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab) {
             sendResponse({ text: 'No active webpage found. Please try again.' });
@@ -195,38 +194,25 @@ async function handleAIChat(message, sendResponse) {
             return;
         }
 
-        // Inject content script to monitor scrolling
-        await chrome.scripting.executeScript({
-            target: { tabId: tab.id },
-            function: () => {
-                // Add scroll event listener if not already added
-                if (!window._scrollListenerAdded) {
-                    window._scrollListenerAdded = true;
-                    let scrollTimeout;
-                    window.addEventListener('scroll', () => {
-                        clearTimeout(scrollTimeout);
-                        scrollTimeout = setTimeout(() => {
-                            // Update content after scroll stops
-                            chrome.runtime.sendMessage({
-                                type: 'updateContent',
-                                content: window.getPageContent()
-                            });
-                        }, 500);
-                    });
-                }
-            }
-        });
-
-        // Get initial page content
+        // Get page content
         const [pageInfo] = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
             function: getPageContent
         });
 
-        const chatHistory = await chrome.storage.local.get(['chatHistory']) || {};
+        // Get chat history for this tab
+        const result = await chrome.storage.local.get(['chatHistory']);
+        const chatHistory = result.chatHistory || {};
+        const tabHistory = chatHistory[tab.id] || [];
+
+        // Format chat history for the system prompt
+        const chatContext = tabHistory
+            .map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`)
+            .join('\n');
+
         const systemPrompt = `
-Previous messages:
-${chatHistory[tab.id]?.map(msg => `${msg.isUser ? 'User' : 'Assistant'}: ${msg.text}`).join('\n')}
+Previous conversation context:
+${chatContext}
 
 Current webpage: ${pageInfo.result.title}
 URL: ${pageInfo.result.url}
@@ -240,7 +226,7 @@ ${pageInfo.result.links}
 Page content:
 ${pageInfo.result.content.substring(0, 3000)}...
 
-Your task is to answer questions about this webpage's content accurately and concisely. If the answer cannot be found in the page content, say so clearly.`;
+Your task is to answer questions about this webpage's content accurately and concisely, maintaining context from the previous conversation. If the answer cannot be found in the page content, say so clearly.`;
 
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
@@ -305,10 +291,12 @@ Your task is to answer questions about this webpage's content accurately and con
 
     } catch (error) {
         console.error('Error in handleAIChat:', error);
-        const errorMessage = error.message === 'Failed to fetch' 
-            ? 'Network error. Please check your internet connection.'
-            : 'An error occurred. Please try again.';
-        sendResponse({ text: errorMessage, error: true });
+        sendResponse({ 
+            text: error.message === 'Failed to fetch' 
+                ? 'Network error. Please check your internet connection.'
+                : 'An error occurred. Please try again.',
+            error: true 
+        });
     }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "AI Webpage Assistant",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Chat with AI about any webpage content. Ask questions, get summaries, and understand content better with AI assistance.",
   "manifest_version": 3,
   "icons": {
@@ -9,7 +9,9 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "author": "nshubham2000@gmail.com",
+  "author": {
+    "email": "nshubham2000@gmail.com"
+  },
   "homepage_url": "https://github.com/yourusername/ai-webpage-assistant",
   "action": {
     "default_popup": "popup.html"
@@ -39,5 +41,6 @@
     "matches": []
   }],
   "minimum_chrome_version": "88",
-  "offline_enabled": false
+  "offline_enabled": false,
+  "short_name": "AI Assistant"
 }
