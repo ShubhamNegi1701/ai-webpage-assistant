@@ -1,7 +1,7 @@
 {
   "name": "AI Webpage Assistant",
   "version": "1.0",
-  "description": "Chat with AI about any webpage content",
+  "description": "Chat with AI about any webpage content. Ask questions, get summaries, and understand content better with AI assistance.",
   "manifest_version": 3,
   "icons": {
     "16": "icons/icon16.png",
@@ -37,5 +37,7 @@
   "web_accessible_resources": [{
     "resources": [],
     "matches": []
-  }]
+  }],
+  "minimum_chrome_version": "88",
+  "offline_enabled": false
 }

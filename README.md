@@ -1,26 +1,27 @@
 # AI Webpage Assistant
 
-A Chrome extension that allows users to chat with AI about any webpage content.
+Chat with AI about any webpage content! Ask questions, get summaries, and understand content better.
 
 ## Features
-- Chat interface for asking questions about webpage content
-- Real-time webpage content analysis
-- OpenAI GPT-3.5 integration
-- Dynamic content updates while scrolling
+- Ask questions about any webpage
+- Get instant AI-powered answers
+- Suggested questions for quick insights
+- Works on any webpage
+- Privacy-focused: Your API key stays local
 
-## Setup
-1. Clone the repository
-2. Open Chrome and go to `chrome://extensions/`
-3. Enable "Developer mode"
-4. Click "Load unpacked" and select the extension directory
-5. Get an OpenAI API key from [OpenAI's website](https://platform.openai.com/api-keys)
-6. Click the extension settings and add your API key
+## Getting Started
+1. Install the extension
+2. Get a free OpenAI API key ($5 free credit)
+3. Enter your API key in settings
+4. Click the extension on any webpage to start chatting!
 
-## Usage
-1. Visit any webpage
-2. Click the extension icon
-3. Ask questions about the webpage content
-4. Get AI-powered responses based on the page content
+## Privacy
+- Your OpenAI API key is stored locally
+- No data collection or tracking
+- All webpage processing happens through your personal API key
+
+## Support
+Need help? Email: nshubham2000@gmail.com
 
 ## Development
 - Built with JavaScript
